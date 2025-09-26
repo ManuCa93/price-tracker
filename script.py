@@ -13,6 +13,14 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import traceback
 # ===========================
 # CONFIG
 # ===========================
@@ -75,19 +83,80 @@ def get_price_amazon(url):
     except:
         return None
 
-def get_price_mediaworld(url):
+def get_price_mediaworld(url, wait_time=20):
+    """
+    Scrape MediaWorld using Selenium (headless). Returns a float price in EUR or None on error.
+    Robust parsing to avoid double dots or strange characters in the price.
+    """
+    driver = None
     try:
-        # Aggiungi timeout=15 per evitare attese infinite
-        r = requests.get(url, headers=HEADERS, timeout=15) 
-        soup = BeautifulSoup(r.text, 'html.parser')
-        whole = soup.select_one('span[data-test="branded-price-whole-value"]')
-        decimal = soup.select_one('span[data-test="branded-price-decimal-value"]')
-        if whole and decimal:
-            price_text = f"{whole.text.strip()}.{decimal.text.strip()}"
-            price_text = re.sub(r'[^\d\.]', '', price_text)
-            return float(price_text)
-    except: # Qui vengono catturati anche i Timeouts e gli errori HTTP (4xx/5xx)
+        chrome_options = Options()
+        try:
+            chrome_options.add_argument("--headless=new")
+        except Exception:
+            chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        chrome_options.add_argument(
+            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+
+        # Make webdriver less detectable
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+        })
+
+        driver.get(url)
+        wait = WebDriverWait(driver, wait_time)
+
+        # Trova il prezzo principale
+        whole = wait.until(EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'span[data-test="branded-price-whole-value"]')
+        ))
+
+        # Decimal potrebbe non esistere
+        try:
+            decimal = driver.find_element(By.CSS_SELECTOR, 'span[data-test="branded-price-decimal-value"]')
+        except:
+            decimal = None
+
+        # --- Pulizia robusta dei prezzi ---
+        whole_text = re.sub(r'[^\d]', '', whole.text.strip())
+        decimal_text = re.sub(r'[^\d]', '', decimal.text.strip() if decimal else "")
+
+        if decimal_text:
+            price_text = f"{whole_text}.{decimal_text}"
+        else:
+            price_text = whole_text
+
+        # Ultimo controllo: se ci sono più punti, tieni solo l'ultimo
+        if price_text.count('.') > 1:
+            parts = price_text.split('.')
+            price_text = ''.join(parts[:-1]) + '.' + parts[-1]
+
+        return float(price_text)
+
+    except Exception as e:
+        print("MediaWorld scraping error:", e)
+        try:
+            if driver:
+                print(driver.page_source[:2000])
+        except:
+            pass
         return None
+    finally:
+        if driver:
+            driver.quit()
+
 
 def get_price_mediamarkt(url):
     try:
