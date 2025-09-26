@@ -1,60 +1,51 @@
 name: Daily Price Tracker
 
-# When to run the workflow
 on:
   schedule:
     # every day at 08:00 Italy time (06:00 UTC)
-    - cron: '0 6 * * *' 
-  # allows manual execution
-  workflow_dispatch: 
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
   run-script:
-    # Eseguiamo su ubuntu-latest
     runs-on: ubuntu-latest
 
     steps:
-      # Clone the repository
+      # Clone repository
       - uses: actions/checkout@v3
 
-      # --- [STEP 1.1: Installazione Matplotlib System Deps] ---
-      # Necessario per il rendering grafico headless di Matplotlib. 
-      # Sostituito libgl1-mesa-glx con libgl1 che è più generico e compatibile.
-      - name: Install system dependencies for Matplotlib
+      # Install system dependencies for Matplotlib (headless)
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 
+          sudo apt-get install -y libgl1
 
-      # --- [STEP 1.2: Installazione Chrome] ---
-      # Usiamo un'azione dedicata per Chrome per una maggiore stabilità con Selenium
-      - name: Setup Chrome/Chromium for Selenium
-        uses: browser-actions/setup-chrome@v1 # Usa un'azione dedicata per il setup del browser
+      # Setup Chrome/Chromium for Selenium
+      - name: Setup Chrome for Selenium
+        uses: browser-actions/setup-chrome@v1
 
-      # Set up Python
-      - name: Set up Python
+      # Setup Python
+      - name: Setup Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # Install required Python libraries
-      - name: Install dependencies
+      # Install Python dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # webdriver-manager e selenium funzioneranno meglio con l'azione setup-chrome
           pip install requests beautifulsoup4 selenium webdriver-manager matplotlib
-          
-      # --- [STEP 2: Esecuzione dello script] ---
+
+      # Run the script
       - name: Run price tracker script
-        # Assicurati che il nome del file sia corretto
         run: python both_adv_telegram.py
-        
-      # --- [STEP 3: Salvataggio degli Artefatti (CSV e PNG)] ---
-      # Questo step salva i file generati (CSV e PNG) in modo che tu possa scaricarli
-      - name: Upload generated artifacts (CSV and PNG)
+
+      # Upload artifacts (CSV and PNG)
+      - name: Upload generated artifacts
         uses: actions/upload-artifact@v4
         with:
           name: price-tracking-data
           path: |
             price_history.csv
             price_history.png
-          if-no-files-found: warn # Avvisa se i file non sono stati creati
+          if-no-files-found: warn
