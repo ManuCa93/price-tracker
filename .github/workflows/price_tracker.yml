@@ -17,15 +17,17 @@ jobs:
       # Clone the repository
       - uses: actions/checkout@v3
 
-      # --- [STEP 1: Installazione delle dipendenze di sistema] ---
-      # Necessario per far funzionare Matplotlib (librerie grafiche)
-      - name: Install system dependencies for Matplotlib and Chrome
+      # --- [STEP 1.1: Installazione Matplotlib System Deps] ---
+      # Necessario per il rendering grafico headless di Matplotlib
+      - name: Install system dependencies for Matplotlib
         run: |
           sudo apt-get update
-          # Libri necessaria per il rendering grafico headless di Matplotlib
           sudo apt-get install -y libgl1-mesa-glx 
-          # Chrome/Chromium è richiesto da Selenium per lo scraping di MediaWorld
-          sudo apt-get install -y chromium-browser
+
+      # --- [STEP 1.2: Installazione Chrome] ---
+      # Usiamo un'azione dedicata per Chrome per una maggiore stabilità con Selenium
+      - name: Setup Chrome/Chromium for Selenium
+        uses: browser-actions/setup-chrome@v1 # Usa un'azione dedicata per il setup del browser
 
       # Set up Python
       - name: Set up Python
@@ -37,9 +39,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # webdriver-manager e selenium funzioneranno meglio con l'azione setup-chrome
           pip install requests beautifulsoup4 selenium webdriver-manager matplotlib
-          # Aggiunta la directory di installazione di Chrome/Chromium al PATH di Selenium
-          export PATH=$PATH:/usr/lib/chromium-browser/
           
       # --- [STEP 2: Esecuzione dello script] ---
       - name: Run price tracker script
