@@ -154,21 +154,29 @@ def update_plot():
             mediaworld.append(float(row["mediaworld_eur"]) if row["mediaworld_eur"] else None)
             mediamarkt.append(float(row["mediamarkt_eur"]) if row["mediamarkt_eur"] else None)
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(timestamps, amazon, color="gold", label="Amazon")
-    plt.plot(timestamps, mediaworld, color="red", label="MediaWorld")
-    plt.plot(timestamps, mediamarkt, color="darkred", label="MediaMarkt (CHF→EUR)")
-    plt.xlabel("Time")
-    plt.ylabel("Price (EUR)")
-    plt.title("Price Trends in EUR")
-    plt.legend()
-    plt.grid(True, linestyle="--", alpha=0.6)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.patch.set_facecolor('#2E2E2E')   
+    ax.set_facecolor('#1E1E1E')          
+
+    ax.plot(timestamps, amazon, color="gold", label="Amazon")
+    ax.plot(timestamps, mediaworld, color="red", label="MediaWorld")
+    ax.plot(timestamps, mediamarkt, color="darkred", label="MediaMarkt (CHF→EUR)")
+
+    ax.set_xlabel("Time", color="white")
+    ax.set_ylabel("Price (EUR)", color="white")
+    ax.set_title("Price Trends in EUR", color="white")
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.6, color='gray')
+    
+    ax.tick_params(colors='white', which='both')
+    
     plt.tight_layout()
     plt.savefig("price_history.png")
     plt.close()
 
+
 # ===========================
-# MAIN
+# MAIN with retry and conditional save
 # ===========================
 if __name__ == "__main__":
     urls = {
@@ -186,11 +194,41 @@ if __name__ == "__main__":
         ),
     }
 
-    amazon = urls["Amazon"][1](urls["Amazon"][0])
-    mediaworld = urls["MediaWorld"][1](urls["MediaWorld"][0])
-    mediamarkt_chf = urls["MediaMarkt"][1](urls["MediaMarkt"][0])
-    mediamarkt_eur = round(mediamarkt_chf * CHF_TO_EUR, 2) if mediamarkt_chf else None
+    PRODUCT_NAME = "Nothing Headphones 1"
+    max_attempts = 100
+    attempt = 0
 
+    amazon = mediaworld = mediamarkt_chf = None
+
+    # --- Retry loop ---
+    while attempt < max_attempts:
+        attempt += 1
+        amazon = urls["Amazon"][1](urls["Amazon"][0])
+        mediaworld = urls["MediaWorld"][1](urls["MediaWorld"][0])
+        mediamarkt_chf = urls["MediaMarkt"][1](urls["MediaMarkt"][0])
+
+        if amazon is not None and mediaworld is not None and mediamarkt_chf is not None:
+            # Tutti i prezzi trovati
+            break
+        else:
+            time.sleep(10)  # attendi 10 secondi prima di ritentare
+
+    # --- Controllo finale ---
+    missing = []
+    if amazon is None:
+        missing.append("Amazon")
+    if mediaworld is None:
+        missing.append("MediaWorld")
+    if mediamarkt_chf is None:
+        missing.append("MediaMarkt")
+
+    if missing:
+        missing_str = ", ".join(missing)
+        send_telegram(f"⚠️ {PRODUCT_NAME} - Error: could not retrieve prices for: {missing_str} after {max_attempts} attempts!")
+        exit()  # Ferma l'esecuzione, niente CSV, niente plot
+
+    # --- Tutti i prezzi presenti: calcolo EUR e salvataggio ---
+    mediamarkt_eur = round(mediamarkt_chf * CHF_TO_EUR, 2)
     timestamp = datetime.now().isoformat(timespec="seconds")
 
     print("Prices found:")
@@ -202,14 +240,12 @@ if __name__ == "__main__":
     update_plot()
     print("✅ Prices saved and plot updated (price_history.png)")
 
-    # --- Send Telegram notifications if price below threshold ---
-    PRODUCT_NAME = "Nothing Headphones 1"
-
-    if amazon is not None and amazon < AMAZON_THRESHOLD:
+    # --- Telegram notifications if below threshold ---
+    if amazon < AMAZON_THRESHOLD:
         send_telegram(f"📉 {PRODUCT_NAME} - Amazon price dropped to {amazon} EUR!")
 
-    if mediaworld is not None and mediaworld < MEDIAWORLD_THRESHOLD:
+    if mediaworld < MEDIAWORLD_THRESHOLD:
         send_telegram(f"📉 {PRODUCT_NAME} - MediaWorld price dropped to {mediaworld} EUR!")
 
-    if mediamarkt_eur is not None and mediamarkt_eur < MEDIAMARKT_THRESHOLD:
+    if mediamarkt_eur < MEDIAMARKT_THRESHOLD:
         send_telegram(f"📉 {PRODUCT_NAME} - MediaMarkt price dropped to {mediamarkt_eur} EUR!")
