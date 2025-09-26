@@ -203,17 +203,21 @@ if __name__ == "__main__":
     # --- Retry loop ---
     while attempt < max_attempts:
         attempt += 1
-        amazon = urls["Amazon"][1](urls["Amazon"][0])
-        mediaworld = urls["MediaWorld"][1](urls["MediaWorld"][0])
-        mediamarkt_chf = urls["MediaMarkt"][1](urls["MediaMarkt"][0])
+        
+        if amazon is None:
+            amazon = urls["Amazon"][1](urls["Amazon"][0])
+            
+        if mediaworld is None:
+            mediaworld = urls["MediaWorld"][1](urls["MediaWorld"][0])
+            
+        if mediamarkt_chf is None:
+            mediamarkt_chf = urls["MediaMarkt"][1](urls["MediaMarkt"][0])
 
         if amazon is not None and mediaworld is not None and mediamarkt_chf is not None:
-            # Tutti i prezzi trovati
             break
         else:
-            time.sleep(5)  # attendi 10 secondi prima di ritentare
+            time.sleep(5) 
 
-    # --- Controllo finale ---
     missing = []
     if amazon is None:
         missing.append("Amazon")
@@ -225,9 +229,9 @@ if __name__ == "__main__":
     if missing:
         missing_str = ", ".join(missing)
         send_telegram(f"⚠️ {PRODUCT_NAME} - Error: could not retrieve prices for: {missing_str} after {max_attempts} attempts!")
-        exit()  # Ferma l'esecuzione, niente CSV, niente plot
+        exit() 
 
-    # --- Tutti i prezzi presenti: calcolo EUR e salvataggio ---
+    # --- all prices present ---
     mediamarkt_eur = round(mediamarkt_chf * CHF_TO_EUR, 2)
     timestamp = datetime.now().isoformat(timespec="seconds")
 
