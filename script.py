@@ -18,7 +18,10 @@ from webdriver_manager.chrome import ChromeDriverManager
 # ===========================
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+                  'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    # Aggiungi queste due righe per specificare che accetti l'italiano e il formato Italia
+    'Accept-Language': 'it-IT,it;q=0.9',
+    'DNT': '1' # Do Not Track (a volte aiuta)
 }
 
 CSV_FILE = "price_history.csv"
@@ -74,7 +77,8 @@ def get_price_amazon(url):
 
 def get_price_mediaworld(url):
     try:
-        r = requests.get(url, headers=HEADERS)
+        # Aggiungi timeout=15 per evitare attese infinite
+        r = requests.get(url, headers=HEADERS, timeout=15) 
         soup = BeautifulSoup(r.text, 'html.parser')
         whole = soup.select_one('span[data-test="branded-price-whole-value"]')
         decimal = soup.select_one('span[data-test="branded-price-decimal-value"]')
@@ -82,7 +86,7 @@ def get_price_mediaworld(url):
             price_text = f"{whole.text.strip()}.{decimal.text.strip()}"
             price_text = re.sub(r'[^\d\.]', '', price_text)
             return float(price_text)
-    except:
+    except: # Qui vengono catturati anche i Timeouts e gli errori HTTP (4xx/5xx)
         return None
 
 def get_price_mediamarkt(url):
@@ -216,7 +220,7 @@ if __name__ == "__main__":
         if amazon is not None and mediaworld is not None and mediamarkt_chf is not None:
             break
         else:
-            time.sleep(5) 
+            time.sleep(10) 
 
     missing = []
     if amazon is None:
