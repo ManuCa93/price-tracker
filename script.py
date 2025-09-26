@@ -315,8 +315,11 @@ if __name__ == "__main__":
 
     save_csv(timestamp, amazon, mediaworld, mediamarkt_eur)
     update_plot()
-    print("✅ Prices saved and plot updated (price_history.png)")
-
+    PLOT_FILE = "price_history.png"
+    if os.path.isfile(PLOT_FILE):
+        print(f"✅ Prices saved and plot **verified and updated** ({PLOT_FILE})")
+    else:
+        print(f"⚠️ Prices saved, but **{PLOT_FILE} not found** after generation attempt. Check previous FATAL ERROR logs.")
     # --- Telegram notifications if below threshold ---
     if amazon < AMAZON_THRESHOLD:
         send_telegram(f"📉 {PRODUCT_NAME} - Amazon price dropped to {amazon} EUR!")

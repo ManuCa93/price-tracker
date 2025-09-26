@@ -3,16 +3,29 @@ name: Daily Price Tracker
 # When to run the workflow
 on:
   schedule:
-    - cron: '0 6 * * *'  # every day at 08:00 Italy time (06:00 UTC)
-  workflow_dispatch:     # allows manual execution
+    # every day at 08:00 Italy time (06:00 UTC)
+    - cron: '0 6 * * *' 
+  # allows manual execution
+  workflow_dispatch: 
 
 jobs:
   run-script:
+    # Eseguiamo su ubuntu-latest
     runs-on: ubuntu-latest
 
     steps:
       # Clone the repository
       - uses: actions/checkout@v3
+
+      # --- [STEP 1: Installazione delle dipendenze di sistema] ---
+      # Necessario per far funzionare Matplotlib (librerie grafiche)
+      - name: Install system dependencies for Matplotlib and Chrome
+        run: |
+          sudo apt-get update
+          # Libri necessaria per il rendering grafico headless di Matplotlib
+          sudo apt-get install -y libgl1-mesa-glx 
+          # Chrome/Chromium è richiesto da Selenium per lo scraping di MediaWorld
+          sudo apt-get install -y chromium-browser
 
       # Set up Python
       - name: Set up Python
@@ -20,12 +33,26 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Install required libraries
+      # Install required Python libraries
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 selenium webdriver-manager matplotlib
-
-      # Run the price tracker script
-      - name: Run price tracker
-        run: python script.py
+          # Aggiunta la directory di installazione di Chrome/Chromium al PATH di Selenium
+          export PATH=$PATH:/usr/lib/chromium-browser/
+          
+      # --- [STEP 2: Esecuzione dello script] ---
+      - name: Run price tracker script
+        # Assicurati che il nome del file sia corretto
+        run: python both_adv_telegram.py
+        
+      # --- [STEP 3: Salvataggio degli Artefatti (CSV e PNG)] ---
+      # Questo step salva i file generati (CSV e PNG) in modo che tu possa scaricarli
+      - name: Upload generated artifacts (CSV and PNG)
+        uses: actions/upload-artifact@v4
+        with:
+          name: price-tracking-data
+          path: |
+            price_history.csv
+            price_history.png
+          if-no-files-found: warn # Avvisa se i file non sono stati creati
