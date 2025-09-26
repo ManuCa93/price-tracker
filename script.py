@@ -357,10 +357,10 @@ if __name__ == "__main__":
     print(f"Current files: {os.listdir('.')}")
 
     # Prepara il messaggio per Telegram
-    message = f"📊🎧 {PRODUCT_NAME} - Daily Price Update:\n"
+    message = f"📊🎧 {PRODUCT_NAME} - Daily Price Update:\n\n"
     message += f"🛒 Amazon: {amazon} EUR\n"
     message += f"🛒 MediaWorld: {mediaworld} EUR\n" 
-    message += f"🛒 MediaMarkt: {mediamarkt_eur} EUR\n"
+    message += f"🛒 MediaMarkt: {mediamarkt_eur} EUR\n\n"
     message += f"⏰ {timestamp}"
 
     # Invia prima il messaggio di testo
