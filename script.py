@@ -364,12 +364,12 @@ if __name__ == "__main__":
     message += f"⏰ {timestamp}"
 
     # Invia prima il messaggio di testo
-    send_telegram(message)
+    # send_telegram(message)
     print("✅ Price message sent to Telegram")
 
     # Poi invia il plot come immagine se esiste
     if plot_exists:
-        if send_telegram_photo("price_history.png", "📈 Price History Chart"):
+        if send_telegram_photo("price_history.png", message):
             print("✅ Plot sent to Telegram")
         else:
             print("❌ Failed to send plot to Telegram")
