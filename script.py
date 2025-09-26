@@ -195,7 +195,7 @@ if __name__ == "__main__":
     }
 
     PRODUCT_NAME = "Nothing Headphones 1"
-    max_attempts = 100
+    max_attempts = 10
     attempt = 0
 
     amazon = mediaworld = mediamarkt_chf = None
@@ -211,7 +211,7 @@ if __name__ == "__main__":
             # Tutti i prezzi trovati
             break
         else:
-            time.sleep(10)  # attendi 10 secondi prima di ritentare
+            time.sleep(5)  # attendi 10 secondi prima di ritentare
 
     # --- Controllo finale ---
     missing = []
