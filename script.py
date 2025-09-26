@@ -71,6 +71,19 @@ def send_telegram(msg):
     except:
         print("Telegram notification failed")
 
+def send_telegram_photo(photo_path, caption=""):
+    """Send photo to Telegram"""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    try:
+        with open(photo_path, 'rb') as photo:
+            files = {'photo': photo}
+            data = {'chat_id': CHAT_ID, 'caption': caption}
+            response = requests.post(url, files=files, data=data)
+            return response.status_code == 200
+    except Exception as e:
+        print(f"Telegram photo send failed: {e}")
+        return False
+
 # --- Scraping functions ---
 def get_price_amazon(url):
     try:
@@ -252,6 +265,10 @@ def update_plot():
 # MAIN with retry and conditional save
 # ===========================
 if __name__ == "__main__":
+    print("=== Starting Price Tracker on GitHub Actions ===")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"Files in directory: {os.listdir('.')}")
+    
     urls = {
         "Amazon": (
             "https://www.amazon.it/gp/product/B0F66XD5LF/ref=ox_sc_act_title_6?smid=A11IL2PNWYJU7H&th=1",
@@ -276,19 +293,28 @@ if __name__ == "__main__":
     # --- Retry loop ---
     while attempt < max_attempts:
         attempt += 1
+        print(f"Attempt {attempt}/{max_attempts}")
         
         if amazon is None:
+            print("Scraping Amazon...")
             amazon = urls["Amazon"][1](urls["Amazon"][0])
+            print(f"Amazon result: {amazon}")
             
         if mediaworld is None:
+            print("Scraping MediaWorld...")
             mediaworld = urls["MediaWorld"][1](urls["MediaWorld"][0])
+            print(f"MediaWorld result: {mediaworld}")
             
         if mediamarkt_chf is None:
+            print("Scraping MediaMarkt...")
             mediamarkt_chf = urls["MediaMarkt"][1](urls["MediaMarkt"][0])
+            print(f"MediaMarkt result: {mediamarkt_chf}")
 
         if amazon is not None and mediaworld is not None and mediamarkt_chf is not None:
+            print("✅ All prices retrieved successfully!")
             break
         else:
+            print("⏳ Some prices missing, retrying...")
             time.sleep(10) 
 
     missing = []
@@ -301,7 +327,9 @@ if __name__ == "__main__":
 
     if missing:
         missing_str = ", ".join(missing)
-        send_telegram(f"⚠️ {PRODUCT_NAME} - Error: could not retrieve prices for: {missing_str} after {max_attempts} attempts!")
+        error_msg = f"⚠️ {PRODUCT_NAME} - Error: could not retrieve prices for: {missing_str} after {max_attempts} attempts!"
+        print(error_msg)
+        send_telegram(error_msg)
         exit() 
 
     # --- all prices present ---
@@ -313,19 +341,58 @@ if __name__ == "__main__":
     print(f"MediaWorld: {mediaworld} EUR")
     print(f"MediaMarkt: {mediamarkt_chf} CHF → {mediamarkt_eur} EUR")
 
+    # Salva CSV
     save_csv(timestamp, amazon, mediaworld, mediamarkt_eur)
-    update_plot()
-    PLOT_FILE = "price_history.png"
-    if os.path.isfile(PLOT_FILE):
-        print(f"✅ Prices saved and plot **verified and updated** ({PLOT_FILE})")
+    print("✅ CSV saved")
+    
+    # Crea e salva il plot
+    plot_success = update_plot()
+    
+    # Verifica se i file sono stati creati
+    csv_exists = os.path.isfile(CSV_FILE)
+    plot_exists = os.path.isfile("price_history.png")
+    
+    print(f"CSV exists: {csv_exists}")
+    print(f"Plot exists: {plot_exists}")
+    print(f"Current files: {os.listdir('.')}")
+
+    # Prepara il messaggio per Telegram
+    message = f"📊🎧 {PRODUCT_NAME} - Daily Price Update:\n"
+    message += f"🛒 Amazon: {amazon} EUR\n"
+    message += f"🛒 MediaWorld: {mediaworld} EUR\n" 
+    message += f"🛒 MediaMarkt: {mediamarkt_eur} EUR\n"
+    message += f"⏰ {timestamp}"
+
+    # Invia prima il messaggio di testo
+    send_telegram(message)
+    print("✅ Price message sent to Telegram")
+
+    # Poi invia il plot come immagine se esiste
+    if plot_exists:
+        if send_telegram_photo("price_history.png", "📈 Price History Chart"):
+            print("✅ Plot sent to Telegram")
+        else:
+            print("❌ Failed to send plot to Telegram")
+            send_telegram("⚠️ Could not send price chart image")
     else:
-        print(f"⚠️ Prices saved, but **{PLOT_FILE} not found** after generation attempt. Check previous FATAL ERROR logs.")
-    # --- Telegram notifications if below threshold ---
+        print("❌ Plot file not found")
+        send_telegram("⚠️ Could not generate price chart")
+
+    # Notifiche per prezzi bassi
+    alerts_sent = False
     if amazon < AMAZON_THRESHOLD:
-        send_telegram(f"📉 {PRODUCT_NAME} - Amazon price dropped to {amazon} EUR!")
+        send_telegram(f"🎯🎧 PRICE ALERT! {PRODUCT_NAME} - Amazon price dropped to {amazon} EUR!")
+        alerts_sent = True
 
     if mediaworld < MEDIAWORLD_THRESHOLD:
-        send_telegram(f"📉 {PRODUCT_NAME} - MediaWorld price dropped to {mediaworld} EUR!")
+        send_telegram(f"🎯🎧 PRICE ALERT! {PRODUCT_NAME} - MediaWorld price dropped to {mediaworld} EUR!")
+        alerts_sent = True
 
     if mediamarkt_eur < MEDIAMARKT_THRESHOLD:
-        send_telegram(f"📉 {PRODUCT_NAME} - MediaMarkt price dropped to {mediamarkt_eur} EUR!")
+        send_telegram(f"🎯🎧 PRICE ALERT! {PRODUCT_NAME} - MediaMarkt price dropped to {mediamarkt_eur} EUR!")
+        alerts_sent = True
+
+    if not alerts_sent:
+        print("✅ No price alerts triggered")
+
+    print("✅ Script completed successfully!")
