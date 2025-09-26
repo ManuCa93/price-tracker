@@ -1,31 +1,31 @@
 name: Daily Price Tracker
 
-# Quando eseguire il workflow
+# When to run the workflow
 on:
   schedule:
-    - cron: '0 8 * * *'  # ogni giorno alle 08:00 UTC
-  workflow_dispatch:     # permette di eseguire manualmente
+    - cron: '0 6 * * *'  # every day at 08:00 Italy time (06:00 UTC)
+  workflow_dispatch:     # allows manual execution
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
 
     steps:
-      # Clona la repo
+      # Clone the repository
       - uses: actions/checkout@v3
 
-      # Imposta Python
+      # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # Installa le librerie necessarie
+      # Install required libraries
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 selenium webdriver-manager matplotlib
 
-      # Esegui lo script
+      # Run the price tracker script
       - name: Run price tracker
         run: python script.py
