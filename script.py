@@ -27,9 +27,8 @@ import traceback
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-    # Aggiungi queste due righe per specificare che accetti l'italiano e il formato Italia
     'Accept-Language': 'it-IT,it;q=0.9',
-    'DNT': '1' # Do Not Track (a volte aiuta)
+    'DNT': '1'
 }
 
 CSV_FILE = "price_history.csv"
@@ -85,16 +84,51 @@ def send_telegram_photo(photo_path, caption=""):
         return False
 
 # --- Scraping functions ---
-def get_price_amazon(url):
-    try:
-        r = requests.get(url, headers=HEADERS)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        price = soup.select_one('span.a-offscreen')
-        if price:
-            text = price.get_text(strip=True).replace('€', '').replace(',', '.')
-            return float(text)
-    except:
-        return None
+def get_price_amazon(url, retries=3, delay=5):
+    """Scrape Amazon price robustly, return float or None"""
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=10)
+            if r.status_code != 200:
+                print(f"Amazon request failed with status {r.status_code}")
+                continue
+
+            soup = BeautifulSoup(r.text, 'html.parser')
+
+            # Prova diversi selettori comuni per il prezzo
+            price_selectors = [
+                'span.a-offscreen',               # classico
+                'span#corePriceDisplay_desktop_feature_div span.a-offscreen',
+                'span#priceblock_ourprice',
+                'span#priceblock_dealprice'
+            ]
+
+            price_text = None
+            for sel in price_selectors:
+                el = soup.select_one(sel)
+                if el and el.get_text(strip=True):
+                    price_text = el.get_text(strip=True)
+                    break
+
+            if not price_text:
+                print(f"Attempt {attempt}: Amazon price not found")
+                time.sleep(delay)
+                continue
+
+            # Pulizia del prezzo
+            price_text = price_text.replace('€', '').replace(',', '.').strip()
+            price_text = re.sub(r'[^\d.]', '', price_text)
+            if not price_text:
+                continue
+
+            return float(price_text)
+
+        except Exception as e:
+            print(f"Attempt {attempt}: Amazon scraping error: {e}")
+            time.sleep(delay)
+
+    return None
+
 
 def get_price_mediaworld(url, wait_time=20):
     """
