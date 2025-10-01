@@ -38,8 +38,8 @@ BOT_TOKEN = "8007475242:AAHhCsZ8-Mt-sVtaX7rmy4JSFU_egrIbRmc"
 CHAT_ID = 350393260  # your chat ID
 
 # Price thresholds for notifications
-AMAZON_THRESHOLD = 250
-MEDIAWORLD_THRESHOLD = 270
+AMAZON_THRESHOLD = 240
+MEDIAWORLD_THRESHOLD = 240
 MEDIAMARKT_THRESHOLD = 240
 
 # ===========================
@@ -95,9 +95,8 @@ def get_price_amazon(url, retries=3, delay=5):
 
             soup = BeautifulSoup(r.text, 'html.parser')
 
-            # Prova diversi selettori comuni per il prezzo
             price_selectors = [
-                'span.a-offscreen',               # classico
+                'span.a-offscreen',               
                 'span#corePriceDisplay_desktop_feature_div span.a-offscreen',
                 'span#priceblock_ourprice',
                 'span#priceblock_dealprice'
@@ -115,7 +114,6 @@ def get_price_amazon(url, retries=3, delay=5):
                 time.sleep(delay)
                 continue
 
-            # Pulizia del prezzo
             price_text = price_text.replace('€', '').replace(',', '.').strip()
             price_text = re.sub(r'[^\d.]', '', price_text)
             if not price_text:
