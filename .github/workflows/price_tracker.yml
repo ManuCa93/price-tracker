@@ -10,7 +10,7 @@ jobs:
   run-script:
     runs-on: ubuntu-latest
     
-    # IMPORTANTE: Permessi per committare nel repository
+    # IMPORTANT: Permissions to commit to the repository
     permissions:
       contents: write
 
@@ -34,11 +34,11 @@ jobs:
       - name: Run price tracker
         run: python script.py
 
-      # NUOVO: Committa automaticamente i file generati
+      # NEW: Automatically commit generated files
       - name: Commit and push price data
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "📊 Aggiornamento prezzi giornaliero - $(date)"
+          commit_message: "📊 Daily price update"
           file_pattern: "price_history.csv price_history.png"
           commit_user_name: "Price Tracker Bot"
           commit_user_email: "actions@github.com"
