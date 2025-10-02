@@ -359,7 +359,7 @@ if __name__ == "__main__":
 
     if missing:
         missing_str = ", ".join(missing)
-        error_msg = f"⚠️ {PRODUCT_NAME} - Error: could not retrieve prices for: {missing_str} after {max_attempts} attempts!"
+        error_msg = f"⚠️ {PRODUCT_NAME} - Error: could not retrieve prices for: {missing_str} after {max_attempts} attempts!\nHowever the prices founded are: \nAmazon {amazon}€\Mediamarkt {round(mediamarkt_chf * CHF_TO_EUR, 2)}€\Mediaworld {mediaworld}€"
         print(error_msg)
         send_telegram(error_msg)
         exit() 
