@@ -2,9 +2,9 @@ name: Daily Price Tracker
 
 # When to run the workflow
 on:
-  schedule:
-    - cron: '0 6 * * *'  # every day at 08:00 Italy time (06:00 UTC)
-  workflow_dispatch:     # allows manual execution
+  # schedule:
+  #   - cron: '0 6 * * *'  # every day at 08:00 Italy time (06:00 UTC)
+  # workflow_dispatch:     # allows manual execution
 
 jobs:
   run-script:
