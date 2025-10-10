@@ -38,9 +38,9 @@ BOT_TOKEN = "8007475242:AAHhCsZ8-Mt-sVtaX7rmy4JSFU_egrIbRmc"
 CHAT_ID = 350393260  # your chat ID
 
 # Price thresholds for notifications
-AMAZON_THRESHOLD = 240
-MEDIAWORLD_THRESHOLD = 240
-MEDIAMARKT_THRESHOLD = 240
+AMAZON_THRESHOLD = 210
+MEDIAWORLD_THRESHOLD = 210
+MEDIAMARKT_THRESHOLD = 210
 
 # ===========================
 # Functions
@@ -397,18 +397,19 @@ if __name__ == "__main__":
 
     # Invia prima il messaggio di testo
     # send_telegram(message)
-    print("✅ Price message sent to Telegram")
+    # print("✅ Price message sent to Telegram")
 
     # Poi invia il plot come immagine se esiste
-    if plot_exists:
-        if send_telegram_photo("price_history.png", message):
-            print("✅ Plot sent to Telegram")
+    if datetime.now().hour == 11 or datetime.now().hour == 23:
+        if plot_exists:
+            if send_telegram_photo("price_history.png", message):
+                print("✅ Plot sent to Telegram")
+            else:
+                print("❌ Failed to send plot to Telegram")
+                send_telegram("⚠️ Could not send price chart image")
         else:
-            print("❌ Failed to send plot to Telegram")
-            send_telegram("⚠️ Could not send price chart image")
-    else:
-        print("❌ Plot file not found")
-        send_telegram("⚠️ Could not generate price chart")
+            print("❌ Plot file not found")
+            send_telegram("⚠️ Could not generate price chart")
 
     # Notifiche per prezzi bassi
     alerts_sent = False
